@@ -10,7 +10,7 @@ ACTION_DIRECTORY = "Actions"
 
 
 def check_action_directory(path: str) -> tuple[str, int]:
-    dir_name = ACTION_DIRECTORY + '/' + path.strip(".gif") + '/'
+    dir_name = ACTION_DIRECTORY + '/' + path.split(".gif", 1)[0] + '/'
     if not os.path.exists(dir_name):
         if not os.path.exists(ACTION_DIRECTORY):
             os.mkdir(ACTION_DIRECTORY)

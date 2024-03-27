@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image, ImageQt
 # import ml_classification
 import hand_recognition
-import pose_recognition
+# import pose_recognition
 import utils
 from utils import ACTION_DIRECTORY, check_action_directory, create_gif
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton
@@ -28,12 +28,15 @@ class VideoThread(QThread):
     def run(self):
         # capture from web cam
         cap = cv2.VideoCapture(0)
+
         while self._run_flag:
             ret, cv_img = cap.read()
+            cv_img = cv2.resize(cv_img, (SCREEN_WIDTH, SCREEN_HEIGHT))
+            cv_img = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
             if ret:
-                pil_img = Image.fromarray(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB))
+                pil_img = Image.fromarray(cv_img)
                 self._last_img = pil_img
-                cv_img = hand_recognition.draw_landmarks(pil_img)
+                # cv_img = hand_recognition.draw_landmarks(pil_img)
                 self.change_pixmap_signal.emit(cv_img)
         # shut down capture system
         cap.release()
@@ -87,9 +90,11 @@ class GIFPreviewWidget(QDialog):
         else:
             frame_image = self.gif_images[self.current_frame]
             frame_image = hand_recognition.draw_landmarks(frame_image)  # draws the landmarks for the hand recognition
-            tensor_image = utils.convert_pil_qt_tensor(frame_image)
-            frame_image = pose_recognition.analyze_image_from_image(tensor_image)
-            frame_image = Image.fromarray(frame_image.astype('uint8'))#.convert('BGR')
+            # print(f"Hand Scores {self.current_frame}: ", hand_recognition.get_landmarks(frame_image))
+            # tensor_image = utils.convert_pil_qt_tensor(frame_image)
+            # print(f"Pose Scores {self.current_frame}: ", pose_recognition.get_keypoints_with_scores(tensor_image))
+            # frame_image = pose_recognition.visualize_image_from_image(tensor_image)
+            frame_image = Image.fromarray(frame_image.astype('uint8'))  # .convert('BGR')
             pixmap = utils.convert_pil_qt(frame_image)
             self.cached_frames.append(pixmap)
         self.label.setPixmap(pixmap)
@@ -131,9 +136,12 @@ class App(QWidget):
         self.images = []
         self.curr_img_index = 0
         self.curr_action_label = ''
-        self.max_frames = 20
-        self.frame_time_milli = 100
 
+        self.max_frames = 30
+        self.total_action_time = 1.5
+        # self.frame_time_milli = 100
+        self.frame_time_milli = int(self.total_action_time * 1000 / self.max_frames)
+        print(self.frame_time_milli)
         # create the label that holds the image
         self.image_label = QLabel(self)
         self.image_label.resize(640, 480)
@@ -235,6 +243,7 @@ class App(QWidget):
 
     @pyqtSlot(str)
     def update_current_label(self, new_label: str):
+        print(new_label)
         self.curr_action_label, self.curr_img_index = check_action_directory(new_label)
         self.clear_current()
 

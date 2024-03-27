@@ -11,6 +11,24 @@ import matplotlib.patches as patches
 import imageio
 import utils
 
+END_HEIGHT, END_WIDTH = 640, 640
+
+model_name = "movenet_lightning"
+# model_name = "movenet_thunder"
+
+if "movenet_lightning" in model_name:
+    model_path = "https://tfhub.dev/google/movenet/singlepose/lightning/4"
+    # model_path = "pose_recognition_model"
+    module = hub.load(model_path)
+    input_size = 192
+elif "movenet_thunder" in model_name:
+    module = hub.load("https://tfhub.dev/google/movenet/singlepose/thunder/4")
+    input_size = 256
+else:
+    raise ValueError("Unsupported model name: %s" % model_name)
+
+print("LOADED")
+
 # visualization util
 # Dictionary that maps from joint names to keypoint indices.
 
@@ -335,23 +353,6 @@ def run_inference(movenet, image, crop_region, crop_size):
     return keypoints_with_scores
 
 
-model_name = "movenet_lightning"
-# model_name = "movenet_thunder"
-
-if "movenet_lightning" in model_name:
-    model_path = "https://tfhub.dev/google/movenet/singlepose/lightning/4"
-    # model_path = "pose_recognition_model"
-    module = hub.load(model_path)
-    input_size = 192
-elif "movenet_thunder" in model_name:
-    module = hub.load("https://tfhub.dev/google/movenet/singlepose/thunder/4")
-    input_size = 256
-else:
-    raise ValueError("Unsupported model name: %s" % model_name)
-
-print("LOADED")
-
-
 def movenet(input_image):
     """Runs detection on an input image.
 
@@ -375,35 +376,38 @@ def movenet(input_image):
     return keypoints_with_scores
 
 
-def analyze_image_from_path(image_path):
+def visualize_image_from_path(image_path):
     # load the input image
     image = tf.io.read_file(image_path)
     image = tf.image.decode_jpeg(image)
-    analyze_image_from_image(image)
+    return visualize_image_from_image(image)
 
 
-def analyze_image_from_image(image):
-    # Run Inference
-    # resize and pad the image to keep the aspect ratio and fit the expected size
-    input_image = tf.expand_dims(image, axis=0)
-    input_image = tf.image.resize_with_pad(input_image, input_size, input_size)
-
-    # run model inference
-    keypoints_with_scores = movenet(input_image)
-
+def visualize_image_from_image(image):
+    keypoints_with_scores = get_keypoints_with_scores(image)
     # visualize the predictions with image
     display_image = tf.expand_dims(image, axis=0)
     display_image = tf.cast(tf.image.resize_with_pad(
-        display_image, 620, 620), dtype=tf.int32)
+        display_image, END_WIDTH, END_HEIGHT), dtype=tf.int32)
     output_overlay = draw_prediction_on_image(
         np.squeeze(display_image._numpy(), axis=0), keypoints_with_scores)
 
     return output_overlay
 
 
+def get_keypoints_with_scores(image):
+    # Run Inference
+    # resize and pad the image to keep the aspect ratio and fit the expected size
+    input_image = tf.expand_dims(image, axis=0)
+    input_image = tf.image.resize_with_pad(input_image, input_size, input_size)
+
+    # run model inference
+    return movenet(input_image)
+
+
 def _demo_images():
     demo_img_path = "full_body_test_cut.jpeg"
-    output_img = analyze_image_from_path(demo_img_path)
+    output_img = visualize_image_from_path(demo_img_path)
     output_img = output_img.astype(np.uint8)
     output_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
     cv2.namedWindow('Out', cv2.WINDOW_NORMAL)
@@ -412,7 +416,7 @@ def _demo_images():
     cv2.destroyAllWindows()
 
     demo_img_path = "full_body_test.jpeg"
-    output_img = analyze_image_from_path(demo_img_path)
+    output_img = visualize_image_from_path(demo_img_path)
     output_img = output_img.astype(np.uint8)
     output_img = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
     cv2.namedWindow('Out', cv2.WINDOW_NORMAL)

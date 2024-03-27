@@ -5,7 +5,7 @@ import mediapipe as mp
 # initialize mediapipe
 mpHands = mp.solutions.hands  # module that performs the hand recognition algorithm
 hands = mpHands.Hands(max_num_hands=2,
-                      min_detection_confidence=0.5)  # configured model
+                      min_detection_confidence=0.6)  # configured model
 mpDraw = mp.solutions.drawing_utils  # draws the key points
 
 
@@ -25,5 +25,18 @@ def draw_landmarks(pil_frame):
                 mpDraw.draw_landmarks(frame, handslms, mpHands.HAND_CONNECTIONS)
     return frame
 
+
+def get_landmarks(pil_frame):
+    frame = np.array(pil_frame)
+    h, w, ch = frame.shape
+    result = hands.process(frame)
+    landmarks = []
+    if result.multi_hand_landmarks:
+        for handslms in result.multi_hand_landmarks:
+            for lm in handslms.landmark:
+                lmx = int(lm.x * h)
+                lmy = int(lm.y * w)
+                landmarks.append([lmx, lmy])
+    return landmarks
 
 

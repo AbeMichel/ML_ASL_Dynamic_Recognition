@@ -126,18 +126,16 @@ def predict(input_path: str):
 
     print(
         "This image most likely belongs to {} with a {:.2f} percent confidence."
-        .format()
+        .format(predictions[0], score)
     )
 
 
 # Main function
 def main():
     data_dir_obj = pathlib.Path(ACTION_DIRECTORY).with_suffix('')
-    # print(len(list(data_dir_obj.glob('*/*.gif'))))
-    # test1 = list(data_dir_obj.glob('test1/*'))
-    # utils.display_gif(test1[0])
+    print(len(list(data_dir_obj.glob('*/*.gif'))))
     load_data(data_dir_obj)
 
 
-
-
+if __name__ == "__main__":
+    main()
