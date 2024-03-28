@@ -1,141 +1,148 @@
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
+import json
+import random
+
 import numpy as np
+
+import matplotlib
+import matplotlib.pyplot as plt
 import PIL
 import pathlib
 import tensorflow as tf
-
-from tensorflow import keras
 from tensorflow.keras import layers
-from tensorflow.keras.models import Sequential
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 
+from assess_gif_data import process_gif, simplify_gif
 import utils
-from utils import ACTION_DIRECTORY
-
-batch_size = 32
-img_height = 180
-img_width = 180
-val_split = 0.5
 
 
-def load_data(data_dir: pathlib.Path):
+matplotlib.use('TkAgg')
 
-    train_ds = tf.keras.utils.image_dataset_from_directory(
-        data_dir,
-        validation_split=val_split,
-        subset="training",
-        seed=123,
-        image_size=(img_height, img_width),
-        batch_size=batch_size
-    )
-    val_ds = tf.keras.utils.image_dataset_from_directory(
-        data_dir,
-        validation_split=val_split,
-        subset="validation",
-        seed=123,
-        image_size=(img_height, img_width),
-        batch_size=batch_size)
-    class_names = train_ds.class_names
-    print(class_names)
+batch_size = 15
+epochs = 20
+val_split = 0.4
 
-    for image_batch, labels_batch in train_ds:
-        print(image_batch.shape)
-        print(labels_batch.shape)
-        break
+'''
+The data we want to train on will either be a directory of gifs or a json file with all the
+images preprocessed resulting in a dictionary of the form: dict[str, list[list[list[int]]]]
+'''
 
-    # Configure dataset for performance
-    AUTOTUNE = tf.data.AUTOTUNE
-    train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
-    val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
-    # Standardize the data
-    normalization_layer = layers.Rescaling(1./255)
+def create_model_from_json(json_file: str):
+    with open(json_file, 'r') as f:
+        json_data = json.load(f)
 
-    normalized_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
-    image_batch, labels_batch = next(iter(normalized_ds))
-    first_image = image_batch[0]
-    print(np.min(first_image), np.max(first_image))
+    class_names = list(json_data.keys())
+    data = []
+    labels = []
 
-    # Create the model
-    num_classes = len(class_names)
+    for class_name, class_data in json_data.items():
+        for gif in class_data:
+            data.append(gif)
+            labels.append(class_name)
 
-    model = Sequential([
-        layers.Rescaling(1./255, input_shape=(img_height, img_width, 3)),
-        layers.Conv2D(16, 3, padding='same', activation='relu'),
-        layers.MaxPooling2D(),
-        layers.Conv2D(32, 3, padding='same', activation='relu'),
-        layers.MaxPooling2D(),
-        layers.Conv2D(64, 3, padding='same', activation='relu'),
-        layers.MaxPooling2D(),
+    data = np.array(data)
+    labels = np.array(labels)
+
+    input_shape = len(data[0])
+
+    label_encoder = LabelEncoder()
+    labels_encoded = label_encoder.fit_transform(labels)
+
+    x_train, x_test, y_train, y_test = train_test_split(data, labels_encoded, test_size=val_split, random_state=random.randint(0,100))
+
+    model = tf.keras.Sequential([
+        # Input layer (reshape input if necessary)
+        layers.Reshape((input_shape, 1), input_shape=(input_shape, 1)),
+
+        # Convolutional layers
+        layers.Conv1D(16, 3, padding='same', activation='relu'),
+        layers.MaxPooling1D(),
+        layers.Conv1D(32, 3, padding='same', activation='relu'),
+        layers.MaxPooling1D(),
+        layers.Conv1D(64, 3, padding='same', activation='relu'),
+        layers.MaxPooling1D(),
+
+        # Flatten layer
         layers.Flatten(),
+
+        # Dense layers
         layers.Dense(128, activation='relu'),
-        layers.Dense(num_classes)
+        layers.Dense(len(class_names), activation='softmax')
     ])
 
-    model.compile(
-        optimizer='adam',
-        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        metrics=['accuracy']
-    )
+    model.compile(optimizer='adam',
+                  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                  metrics=['accuracy'])
+    model_metrics = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size)
+    plot_model_metrics(model_metrics)
+    return model, label_encoder
 
-    model.summary()
 
-    # Train the model
-    epochs = 10
-    history = model.fit(
-        train_ds,
-        validation_data=val_ds,
-        epochs=epochs
-    )
+def plot_model_metrics(metrics):
+    # Plot training loss
+    plt.plot(metrics.history['loss'], label='Training Loss')
 
-    # Visualize the training results
-    acc = history.history['accuracy']
-    val_acc = history.history['val_accuracy']
+    # Check if validation loss is available
+    if 'val_loss' in metrics.history:
+        # Plot validation loss
+        plt.plot(metrics.history['val_loss'], label='Validation Loss')
 
-    loss = history.history['loss']
-    val_loss = history.history['val_loss']
+    plt.title('Model Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.show()
 
-    epochs_range = range(epochs)
+    # Plot training accuracy
+    plt.plot(metrics.history['accuracy'], label='Training Accuracy')
 
-    plt.figure(figsize=(8, 8))
-    plt.subplot(1, 2, 1)
-    plt.plot(epochs_range, acc, label='Training Accuracy')
-    plt.plot(epochs_range, val_acc, label='Validation Accuracy')
-    plt.legend(loc='lower right')
-    plt.title('Training and Validation Accuracy')
+    # Check if validation accuracy is available
+    if 'val_accuracy' in metrics.history:
+        # Plot validation accuracy
+        plt.plot(metrics.history['val_accuracy'], label='Validation Accuracy')
 
-    plt.subplot(1, 2, 2)
-    plt.plot(epochs_range, loss, label='Training Loss')
-    plt.plot(epochs_range, val_loss, label='Validation Loss')
-    plt.legend(loc='upper right')
-    plt.title('Training and Validation Loss')
+    plt.title('Model Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend()
     plt.show()
 
 
-def predict(input_path: str):
-    path = tf.keras.utils.get_file('Input Action', origin=input_path)
-    img = tf.keras.utils.load_img(
-        path, target_size=(img_height, img_width)
-    )
-    img_array = tf.keras.utils.img_to_array(img)
-    img_array = tf.expand_dims(img_array, 0)  # Creates a batch
+def predict(input_gif_path: str, model, label_encoder=None):
+    input_gif = process_gif(input_gif_path)
+    simple_gif = simplify_gif(input_gif)
+    simple_gif = np.array(simple_gif)
+    simple_gif = simple_gif.reshape(1, -1, 1)
+    # print(simple_gif)
+    predictions = model.predict(simple_gif)
+    print(predictions)
+    predicted_classes = np.argmax(predictions, axis=1)
 
-    predictions = model.predict(img_array)
-    score = tf.nn.softmax(predictions[0])
+    if label_encoder:
+        predicted_classes = label_encoder.inverse_transform(predicted_classes)
 
-    print(
-        "This image most likely belongs to {} with a {:.2f} percent confidence."
-        .format(predictions[0], score)
-    )
-
-
-# Main function
-def main():
-    data_dir_obj = pathlib.Path(ACTION_DIRECTORY).with_suffix('')
-    print(len(list(data_dir_obj.glob('*/*.gif'))))
-    load_data(data_dir_obj)
+    print(f"Path: {input_gif_path}\nPredicted Class: {predicted_classes[0]}")
 
 
 if __name__ == "__main__":
-    main()
+    encoder = None
+    # utils.display_gif_with_hr("Input_GIFS/goodbye.gif")
+    # utils.display_gif_with_hr("Input_GIFS/hello.gif")
+    # utils.display_gif_with_hr("Input_GIFS/thank_you.gif")
+    # utils.display_gif_with_hr("Input_GIFS/nice_to_meet_you.gif")
+    # utils.display_gif_with_hr("Input_GIFS/how_are_you.gif")
+    # new_model, encoder = create_model_from_json("Actions_processed_simple.json")
+    # ['goodbye' 'hello' 'how_are_you' 'nice_to_meet_you' 'thank_you']
+    # tf.keras.models.save_model(new_model, "jsonBasedModel.keras")
+    #
+    saved_model = tf.keras.models.load_model("jsonBasedModel.keras")
+    predict("Input_GIFS/goodbye.gif", saved_model, encoder)
+    predict("Input_GIFS/hello.gif", saved_model, encoder)
+    predict("Input_GIFS/how_are_you.gif", saved_model, encoder)
+    predict("Input_GIFS/nice_to_meet_you.gif", saved_model, encoder)
+    predict("Input_GIFS/thank_you.gif", saved_model, encoder)
+    predict("Actions/how_are_you/0.gif", saved_model, encoder)
+    predict("Actions/thank_you/0.gif", saved_model, encoder)
+    predict("Actions/hello/0.gif", saved_model, encoder)
+    predict("Actions/nice_to_meet_you/0.gif", saved_model, encoder)

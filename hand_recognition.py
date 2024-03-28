@@ -5,7 +5,7 @@ import mediapipe as mp
 # initialize mediapipe
 mpHands = mp.solutions.hands  # module that performs the hand recognition algorithm
 hands = mpHands.Hands(max_num_hands=2,
-                      min_detection_confidence=0.6)  # configured model
+                      min_detection_confidence=0.65)  # configured model
 mpDraw = mp.solutions.drawing_utils  # draws the key points
 
 

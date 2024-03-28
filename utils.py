@@ -6,6 +6,8 @@ import cv2
 import PySimpleGUI as sg
 import tensorflow as tf
 
+import hand_recognition
+
 ACTION_DIRECTORY = "Actions"
 
 
@@ -64,6 +66,32 @@ def display_gif(gif_file_path: str):
                 done = True
                 break
             window['-IMAGE-'].update(data=ImageTk.PhotoImage(frame))
+        if done:
+            break
+
+
+def display_gif_with_hr(gif_file_path: str):
+    layout = [[sg.Image(key='-IMAGE-')]]
+    window = sg.Window(gif_file_path, layout, element_justification='c', margins=(0, 0), element_padding=(0, 0),
+                       finalize=True, location=(0, 0))
+    # window.close_destroys_window = True
+    interframe_duration = Image.open(gif_file_path).info['duration'] * 2
+    done = False
+    while True:
+        # i = 1
+        for frame in ImageSequence.Iterator(Image.open(gif_file_path)):
+            if len(np.array(frame).shape) == 3:
+                frame = hand_recognition.draw_landmarks(frame)
+                lms = hand_recognition.get_landmarks(frame)
+                print(len(lms))
+                frame = Image.fromarray(frame)
+            event, values = window.read(timeout=interframe_duration)
+            if event == sg.WIN_CLOSED:
+                done = True
+                break
+            window['-IMAGE-'].update(data=ImageTk.PhotoImage(frame))
+            # print(i)
+            # i += 1
         if done:
             break
 
