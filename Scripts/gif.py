@@ -8,7 +8,6 @@ import tkinter as tk
 from Scripts import hand_recognition
 from Scripts.hand_recognition import get_landmarks
 
-ACTION_DIRECTORY = "Actions_New"
 DEFAULT_POINT_VALUE: int = 9999999  # The value we will put in place of "missing" data
 FRAMES_PER_GIF: int = 30
 POINTS_PER_FRAME: int = 42
@@ -311,7 +310,7 @@ def convert_pil_or_cv_to_tensor(img):
     return image_tensor
 
 
-def open_gif_as_pil(gif_file_path: str) -> GIFPIL:
+def open_gif_as_pil(gif_file_path: str, debug: bool) -> GIFPIL:
     gif = Image.open(gif_file_path)
 
     # Extract frames from the GIF
@@ -323,14 +322,15 @@ def open_gif_as_pil(gif_file_path: str) -> GIFPIL:
             gif.seek(gif.tell() + 1)
         except EOFError:
             break
-    print(f"Successfully loaded GIF:\n\tPath: {gif_file_path}\n\tFrames: {pil_gif.frame_count()}")
+    if debug:
+        print(f"Successfully loaded GIF:\n\tPath: {gif_file_path}\n\tFrames: {pil_gif.frame_count()}")
     # Close the GIF file
     gif.close()
     return pil_gif
 
 
 def display_gif_from_path(gif_file_path: str):
-    gif = open_gif_as_pil(gif_file_path)
+    gif = open_gif_as_pil(gif_file_path, True)
     display_gif(gif.get_frames())
 
 
@@ -356,7 +356,7 @@ def convert_all_gifs_to_simple_json(gif_dir: str, save_path: str):
     for label, gifs in action_dict.items():
         print(label)
         for gif_path in gifs:
-            gif = open_gif_as_pil(gif_path)
+            gif = open_gif_as_pil(gif_path, False)
             gif.set_class(label)
             json_gif = gif.to_json()
             simple_gifs.append(json_gif.to_simple())
@@ -364,7 +364,7 @@ def convert_all_gifs_to_simple_json(gif_dir: str, save_path: str):
 
 
 if __name__ == "__main__":
-    tmp_path = os.path.abspath("./") + "/" + ACTION_DIRECTORY
+    tmp_path = os.path.abspath("./") + "/" + "Actions_New"
     print(tmp_path)
     convert_all_gifs_to_simple_json(tmp_path, "./Simple_Gifs.json")
 

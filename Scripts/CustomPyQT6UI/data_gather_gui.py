@@ -5,14 +5,15 @@ import cv2
 import numpy as np
 from PIL import Image, ImageQt
 from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton
-from PyQt6.QtWidgets import QProgressBar, QDialog
+from PyQt6.QtWidgets import QProgressBar, QDialog, QFileDialog
 from PyQt6.QtCore import QTimer, Qt, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QImage, QPixmap, QPixelFormat, QHideEvent, QShowEvent
 
-from Scripts.gif import FRAMES_PER_GIF, ACTION_DIRECTORY, GIFCV, convert_cv_frame_to_qt
+from Scripts.gif import FRAMES_PER_GIF, GIFCV, convert_cv_frame_to_qt, convert_all_gifs_to_simple_json
 from Scripts.CustomPyQT6UI.video_thread import VideoThread
 from Scripts.CustomPyQT6UI.gif_label_input import ActionLabelInput
 from Scripts.CustomPyQT6UI.gif_preview_widget import GIFPreviewWidget
+from Scripts.CustomPyQT6UI.directory_select_widget import DirectorySelect
 
 SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
 
@@ -28,7 +29,8 @@ class DataGatherApp(QWidget):
         self.curr_img_index = 0
         self.curr_action_label = ''
 
-        self.save_dir = ''
+        self.save_dir = './'
+        self.save_path = ''
 
         self.total_action_time = 1.5
         # self.frame_time_milli = 100
@@ -43,16 +45,15 @@ class DataGatherApp(QWidget):
         video_layout = QVBoxLayout()  # Layout with video and label selection
         action_layout = QVBoxLayout()  # Layout with all the action buttons
 
-        train_btn = QPushButton("Train New Model")
         create_btn = QPushButton("Record New GIF [Space]")
         preview_btn = QPushButton("Preview Current GIF [P]")
         save_btn = QPushButton("Save Current GIF [S]")
         delete_btn = QPushButton("Delete Current GIF [Delete]")
+        save_dir_select = DirectorySelect("Select Save Directory")
+        save_to_json_btn = QPushButton("Create JSON Data From Actions")
 
         self.progress_bar = QProgressBar()
         self.trainingLabelInput = ActionLabelInput()
-
-        train_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # TODO
 
         create_btn.clicked.connect(self.start_recording)
         create_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -72,12 +73,17 @@ class DataGatherApp(QWidget):
         self.trainingLabelInput.label_updated_signal.connect(self.update_current_label)
         self.trainingLabelInput.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
+        save_dir_select.directory_selected_signal.connect(self.update_save_dir)
+
+        save_to_json_btn.clicked.connect(self.create_json_from_dir)
+
         # create a vertical box layout and add the two labels
         video_layout.addWidget(self.progress_bar)
         video_layout.addWidget(self.image_label)
+        video_layout.addWidget(save_dir_select)
         video_layout.addWidget(self.trainingLabelInput)
+        video_layout.addWidget(save_to_json_btn)
 
-        action_layout.addWidget(train_btn)
         action_layout.addWidget(create_btn)
         action_layout.addWidget(preview_btn)
         action_layout.addWidget(save_btn)
@@ -122,7 +128,8 @@ class DataGatherApp(QWidget):
             self.preview_current_gif()
 
     def closeEvent(self, event):
-        self.thread.stop()
+        if self.thread:
+            self.thread.stop()
         event.accept()
 
     def start_recording(self):
@@ -151,7 +158,7 @@ class DataGatherApp(QWidget):
 
     def save_img(self):
         if self.curr_gif.frame_count() > 0:
-            gif_save_path = self.save_dir + '\\' + str(self.curr_img_index) + '.gif'
+            gif_save_path = self.save_path + '\\' + str(self.curr_img_index) + '.gif'
             self.curr_gif.save_gif(gif_save_path)
             self.curr_img_index += 1
             print(f"\tCurrent Data Count: {self.curr_img_index}")
@@ -174,12 +181,48 @@ class DataGatherApp(QWidget):
         self.progress_bar.setValue(0)
 
     @pyqtSlot(str)
+    def update_save_dir(self, dir_path: str):
+        self.save_dir = dir_path + '\\Actions'
+        self.update_current_label(self.curr_action_label)
+
+    @pyqtSlot(str)
     def update_current_label(self, new_label: str):
-        self.save_dir = os.path.abspath('.\\') + '\\' + ACTION_DIRECTORY + '\\' + new_label.split(".gif", 1)[0] + '\\'
-        self.curr_img_index = check_action_directory(self.save_dir)
-        print(f"New save directory:\n\t{self.save_dir}")
+        self.curr_action_label = new_label.split(".gif", 1)[0]
+        self.save_path = self.save_dir + '\\' + self.curr_action_label + '\\'
+        self.curr_img_index = check_action_directory(self.save_path)
+        print(f"New save directory:\n\t{self.save_path}")
         print(f"\tCurrent Data Count: {self.curr_img_index}")
         self.clear_current()
+
+    def create_json_from_dir(self):
+        working_dir = os.path.dirname(self.save_dir)
+        print(get_num_gifs_in_dir(self.save_dir))
+        if get_num_gifs_in_dir(self.save_dir) == 0:
+            print("Current action directory is empty!")
+            return
+        file_dialog = QFileDialog(self)
+        file_dialog.setFileMode(QFileDialog.FileMode.AnyFile)
+        file_dialog.setNameFilter("*.json")
+        file_name, ok = file_dialog.getSaveFileName(self,
+                                                    caption="JSON Save DATA",
+                                                    directory=working_dir,
+                                                    filter='JSON (*.json)'
+                                                    )
+
+        if ok:
+            convert_all_gifs_to_simple_json(self.save_dir, file_name)
+
+
+def get_num_gifs_in_dir(dir_path: str) -> int:
+    count = 0
+    full_dir_path = os.path.abspath(dir_path)
+    for path in os.listdir(full_dir_path):
+        full_path = full_dir_path + '\\' + path
+        if os.path.isdir(full_path):
+            count += get_num_gifs_in_dir(full_path)
+        elif full_path.endswith('.gif'):
+            count += 1
+    return count
 
 
 def check_action_directory(dir_name: str) -> int:
@@ -188,12 +231,7 @@ def check_action_directory(dir_name: str) -> int:
             os.mkdir(os.path.dirname(dir_name))
         os.mkdir(dir_name)
         return 0
-    i = 0
-    for file in os.listdir(dir_name):
-        # print(file)
-        if os.path.isfile(dir_name + file):
-            i += 1
-    return i
+    return get_num_gifs_in_dir(dir_name)
 
 
 if __name__ == "__main__":

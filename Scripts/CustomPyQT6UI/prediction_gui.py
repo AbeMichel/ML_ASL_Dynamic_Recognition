@@ -1,6 +1,6 @@
 import sys
-
-from PyQt6.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QHBoxLayout, QPushButton
+import numpy as np
+from PyQt6.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt6.QtCore import Qt
 
 
@@ -24,12 +24,22 @@ class PredictionApp(QWidget):
         # create layouts
         main_layout = QVBoxLayout()
 
-        # add widgets to layouts
-        main_layout.addWidget(prediction_btn, stretch=1)
-        # create layout hierarchy
-
         # set main layout
         self.setLayout(main_layout)
+
+        # add widgets to layouts
+        main_layout.addWidget(load_model_btn, stretch=1)
+        main_layout.addWidget(prediction_btn, stretch=1)
+
+        # set widget attributes
+
+        # create layout hierarchy
+
+    def load_model_from_folder(self):
+        pass
+
+    def predict_on_new(self):
+        pass
 
 
 if __name__ == "__main__":

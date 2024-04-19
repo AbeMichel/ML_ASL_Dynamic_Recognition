@@ -2,4 +2,8 @@
 /build
 /venv
 /Main.egg-info
+*.json
+*.keras
+*.pkl
+*.gif
 

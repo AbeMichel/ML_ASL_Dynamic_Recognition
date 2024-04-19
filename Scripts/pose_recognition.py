@@ -8,7 +8,6 @@ from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
 import matplotlib.patches as patches
 
-import imageio
 from Scripts.gif import GIFPIL
 
 END_HEIGHT, END_WIDTH = 640, 640

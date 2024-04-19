@@ -1,6 +1,7 @@
 import json
 import os.path
 import random
+from datetime import datetime
 import numpy as np
 import pickle
 
@@ -14,21 +15,16 @@ from sklearn.preprocessing import LabelEncoder
 
 import Scripts.gif as gif_utils
 
-
 matplotlib.use('TkAgg')
 
-BATCH_SIZE = 15
-EPOCHS = 20
-VAL_SPLIT = 0.4
 
-
-def create_model_from_json_path(json_file_path: str, model_name: str):
+def create_model_from_json_path(json_file_path: str, batch_size: int = 15, num_epochs: int = 20, val_split: float = 0.4):
     with open(json_file_path, 'r') as json_file:
         gifs_json_data = json.load(json_file)
-    create_model_from_json_data(gifs_json_data, model_name)
+    return create_model_from_json_data(gifs_json_data, batch_size, num_epochs, val_split)
 
 
-def create_model_from_json_data(gifs_json_data: dict[str, list[list[int]]], model_name: str):
+def create_model_from_json_data(gifs_json_data: dict[str, list[list[int]]], batch_size: int = 15, num_epochs: int = 20, val_split: float = 0.4):
     class_names = list(gifs_json_data.keys())
     data: list[list[int]] = []
     labels: list[str] = []
@@ -45,11 +41,6 @@ def create_model_from_json_data(gifs_json_data: dict[str, list[list[int]]], mode
 
     label_encoder = LabelEncoder()
     labels_encoded = label_encoder.fit_transform(np_labels)
-
-    x_train, x_test, y_train, y_test = train_test_split(np_data,
-                                                        labels_encoded,
-                                                        test_size=VAL_SPLIT,
-                                                        random_state=random.randint(0, 100))
 
     model = tf.keras.Sequential([
         # Input layer (reshape input if necessary)
@@ -72,12 +63,17 @@ def create_model_from_json_data(gifs_json_data: dict[str, list[list[int]]], mode
     ])
 
     model.compile(optimizer='adam',
-                  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
                   metrics=['accuracy'])
 
-    model_metrics = model.fit(x_train, y_train, epochs=EPOCHS, batch_size=BATCH_SIZE)
+    model_metrics = model.fit(np_data,
+                              labels_encoded,
+                              epochs=num_epochs,
+                              batch_size=batch_size,
+                              validation_split=val_split)
+
     plot_model_metrics(model_metrics)
-    return model, label_encoder
+    return model, label_encoder, model_metrics
 
 
 def plot_model_metrics(metrics):
@@ -132,18 +128,24 @@ def save_label_encoder(label_encoder, save_path: str) -> None:
         pickle.dump((label_encoder, label_encoder.classes_), file)
 
 
-def save_model_and_labels(model, label_encoder, save_path) -> None:
+def save_model_and_labels(model, label_encoder: LabelEncoder, save_path: str) -> str:
     def ensure_path_exists(path: str):
         if os.path.exists(path):
             return
         base_path = os.path.dirname(path)
         ensure_path_exists(base_path)
         os.mkdir(path)
+
+    date = datetime.now()
+    date_formatted = date.strftime("%m-%d-%Y")
+    time_formatted = date.strftime("%H%M")
+    save_path += f"\\model_{date_formatted}_{time_formatted}"
     ensure_path_exists(save_path)
     model_path = save_path + "\\model.keras"
     encoder_path = save_path + "\\encoder.pkl"
     save_tf_model(model, model_path)
     save_label_encoder(label_encoder, encoder_path)
+    return save_path
 
 
 def load_tf_model(model_path: str):
@@ -169,3 +171,9 @@ def load_model_and_labels(folder_path):
     return model, encoder
 
 
+if __name__ == "__main__":
+    json_path = os.path.abspath('../test_data.json')
+    # mdl, encdr = create_model_from_json_path(json_path)
+    # save_model_and_labels(mdl, encdr, "../")
+    mdl, encdr = load_model_and_labels('../model_04-18-2024_2204')
+    print(encdr.classes_)

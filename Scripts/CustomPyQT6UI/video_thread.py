@@ -17,7 +17,6 @@ class VideoThread(QThread):
     def run(self):
         # capture from web cam
         cap = cv2.VideoCapture(0)
-
         while self._run_flag:
             ret, cv_img = cap.read()
             cv_img = cv2.resize(cv_img, (SCREEN_WIDTH, SCREEN_HEIGHT))

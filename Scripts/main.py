@@ -5,6 +5,7 @@ from PyQt6.QtCore import Qt
 
 from CustomPyQT6UI.main_window_tab_bar import MainWindowTabBar
 from CustomPyQT6UI.data_gather_gui import DataGatherApp
+from CustomPyQT6UI.model_building_gui import ModelBuildApp
 from CustomPyQT6UI.prediction_gui import PredictionApp
 from CustomPyQT6UI.main_window_read_me import ReadMeWindow
 
@@ -25,7 +26,8 @@ class MainApp(QWidget):
         # create the needed UI elements
         tabs = MainWindowTabBar(self)
         readme = ReadMeWindow()
-        training = DataGatherApp()
+        data_gather = DataGatherApp()
+        build_model = ModelBuildApp()
         prediction = PredictionApp()
 
         # create layouts
@@ -38,8 +40,9 @@ class MainApp(QWidget):
         main_layout.addWidget(tabs, stretch=1)
         # main_layout.addWidget(training, stretch=1)
         tabs.add_tab(readme, "Home")
-        tabs.add_tab(prediction, "Prediction")
-        tabs.add_tab(training, "Training")
+        tabs.add_tab(data_gather, "Create Data")
+        tabs.add_tab(build_model, "Build Model")
+        tabs.add_tab(prediction, "Predict")
 
         # create layout hierarchy
 
