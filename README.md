@@ -128,7 +128,11 @@ If you're happy with the results select a save directory for the model and hit t
 
 <img alt="" src=".\README Resources\build_model_save_model.jpg" width="500px">
 
-The model will be saved in a folder labeled "model_month-day-year_time". This folder will contain the encoded labels as a pickle file and the keras model.
+This saved model will be a folder containing the encoded labels as a pickle file and the keras model.
+1. The save directory selected. 
+2. The name of the model. The naming format is "model_month-day-year_time" based on when the model was saved.
+3. The label encoder. This is a pickle file used to decode the output of the model to legible class names.
+4. The keras model file.
 
 <img alt="" src=".\README Resources\build_model_saved_model.jpg" width="500px">
 
@@ -137,6 +141,7 @@ The model will be saved in a folder labeled "model_month-day-year_time". This fo
 Once you've built a model you're ready to predict on new data so load your model by selecting the model folder.
 
 <img alt="" src=".\README Resources\predict_load_model.jpg" width="500px">
+
 <img alt="" src=".\README Resources\predict_loading_model.jpg" width="500px">
 
 The UI for creating new data to predict on is very similar to creating data for the model.
