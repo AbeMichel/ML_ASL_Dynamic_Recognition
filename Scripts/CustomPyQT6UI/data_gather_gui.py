@@ -182,7 +182,7 @@ class DataGatherApp(QWidget):
 
     @pyqtSlot(str)
     def update_save_dir(self, dir_path: str):
-        self.save_dir = dir_path + '\\Actions'
+        self.save_dir = dir_path
         self.update_current_label(self.curr_action_label)
 
     @pyqtSlot(str)
