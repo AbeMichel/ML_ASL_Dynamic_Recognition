@@ -18,7 +18,6 @@ import Scripts.gif as gif_utils
 matplotlib.use('TkAgg')
 
 
-<<<<<<< HEAD
 def shuffle_data_and_labels(data: list, labels: list):
     if len(data) == 0:
         return data, labels
@@ -28,8 +27,6 @@ def shuffle_data_and_labels(data: list, labels: list):
     return list(shuffled_data), list(shuffled_labels)
 
 
-=======
->>>>>>> parent of d14e7fb (Fully functional GUI, created decent model for 4 classes, provided .json file for the data used in the model to allow for new models to be created from it)
 def create_model_from_json_path(json_file_path: str, batch_size: int = 15, num_epochs: int = 20, val_split: float = 0.4):
     with open(json_file_path, 'r') as json_file:
         gifs_json_data = json.load(json_file)
@@ -74,25 +71,16 @@ def create_model_from_json_data(gifs_json_data: dict[str, list[list[int]]], batc
     label_encoder = LabelEncoder()
     labels_encoded = label_encoder.fit_transform(np_labels)
 
-    model = tf.keras.Sequential([
-        # Input layer (reshape input if necessary)
-        layers.Reshape((input_shape, 1), input_shape=(input_shape, 1)),
+    model = tf.keras.Sequential()
+    model.add(layers.Reshape((input_shape, 1), input_shape=(input_shape, 1)))
 
-        # Convolutional layers
-        layers.Conv1D(16, 3, padding='same', activation='relu'),
-        layers.MaxPooling1D(),
-        layers.Conv1D(32, 3, padding='same', activation='relu'),
-        layers.MaxPooling1D(),
-        layers.Conv1D(64, 3, padding='same', activation='relu'),
-        layers.MaxPooling1D(),
-
-        # Flatten layer
-        layers.Flatten(),
-
-        # Dense layers
-        layers.Dense(128, activation='relu'),
-        layers.Dense(len(class_names), activation='softmax')
-    ])
+    model.add(layers.Conv1D(32, 3, padding='same', activation='relu'))
+    model.add(layers.Conv1D(64, 3, padding='same', activation='relu'))
+    model.add(layers.MaxPooling1D())
+    model.add(layers.Dropout(rate=0.1))
+    model.add(layers.Flatten())
+    model.add(layers.Dense(128, activation='relu'))
+    model.add(layers.Dense(len(class_names), activation='softmax'))
 
     model.compile(optimizer='adam',
                   loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),

@@ -10,7 +10,7 @@ from Scripts.hand_recognition import get_landmarks
 
 DEFAULT_POINT_VALUE: int = 9999999  # The value we will put in place of "missing" data
 FRAMES_PER_GIF: int = 30
-POINTS_PER_FRAME: int = 42
+POINTS_PER_FRAME: int = 63
 
 
 class GIF:
@@ -34,7 +34,6 @@ class GIFSimple(GIF):
 
     def set_data(self, data: list[int]) -> None:
         self._data = data
-
 
 class GIFJSON(GIF):
     def __init__(self) -> None:
@@ -138,6 +137,9 @@ class GIFCV(GIF):
         pil_gif: GIFPIL = self.to_pil()
         return pil_gif.to_json()
 
+    def to_simple(self) -> GIFSimple:
+        return self.to_json().to_simple()
+
     def to_qt(self) -> GIFQT:
         pil_gif: GIFPIL = self.to_pil()
         return pil_gif.to_qt()
@@ -145,6 +147,7 @@ class GIFCV(GIF):
     def save_gif(self, path: str) -> None:
         pil_gif: GIFPIL = self.to_pil()
         pil_gif.save_gif(path)
+
 
 
 class GIFPIL(GIF):

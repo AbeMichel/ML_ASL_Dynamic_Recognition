@@ -45,7 +45,7 @@ class DataGatherApp(QWidget):
         video_layout = QVBoxLayout()  # Layout with video and label selection
         action_layout = QVBoxLayout()  # Layout with all the action buttons
 
-        create_btn = QPushButton("Record New GIF [Space]")
+        create_btn = QPushButton("Record New GIF [R]")
         preview_btn = QPushButton("Preview Current GIF [P]")
         save_btn = QPushButton("Save Current GIF [S]")
         delete_btn = QPushButton("Delete Current GIF [Delete]")
@@ -118,7 +118,7 @@ class DataGatherApp(QWidget):
 
     def keyPressEvent(self, a0) -> None:
         key = a0.key()
-        if key == Qt.Key.Key_Space:
+        if key == Qt.Key.Key_R:
             self.start_recording()
         elif key == Qt.Key.Key_S:
             self.save_img()
@@ -229,7 +229,8 @@ def check_action_directory(dir_name: str) -> int:
     if not os.path.exists(dir_name):
         if not os.path.exists(os.path.dirname(dir_name)):
             os.mkdir(os.path.dirname(dir_name))
-        os.mkdir(dir_name)
+        if not os.path.exists(dir_name):
+            os.mkdir(dir_name)
         return 0
     return get_num_gifs_in_dir(dir_name)
 
