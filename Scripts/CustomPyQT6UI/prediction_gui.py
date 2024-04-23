@@ -1,20 +1,23 @@
 import sys
 import time
 import numpy as np
+from contextlib import redirect_stdout
+from io import StringIO
 from PyQt6.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QProgressBar, \
     QFileDialog
 from PyQt6.QtCore import Qt, pyqtSlot, QTimer
 from PyQt6.QtGui import QHideEvent, QShowEvent
 
 from Scripts.gif import GIFCV, convert_cv_frame_to_qt, FRAMES_PER_GIF
-from Scripts.machine_learning_model import predict_gif, load_model_and_labels
+from Scripts.machine_learning_model import predict_gif, load_model_labels_and_metrics, plot_model_metrics
 from Scripts.CustomPyQT6UI.video_thread import VideoThread
 from Scripts.CustomPyQT6UI.gif_preview_widget import GIFPreviewWidget
-
+from Scripts.CustomPyQT6UI.tf_summary_dialog import ModelSummaryDialog
 
 class PredictionApp(QWidget):
     def __init__(self):
         super().__init__()
+        self.metrics: dict = None
         self.thread: VideoThread = None
         self.model = None
         self.encoder = None
@@ -26,6 +29,8 @@ class PredictionApp(QWidget):
         self.image_label = QLabel()
         self.model_loading_status = QLabel()
         self.prediction_status = QLabel()
+        self.metrics_status = QLabel()
+        self.summary_status = QLabel()
         self.init_ui()
         self.show()
 
@@ -39,6 +44,8 @@ class PredictionApp(QWidget):
         # create the needed UI elements
 
         load_model_btn = QPushButton("Load Model")
+        view_metrics_btn = QPushButton("View Model Metrics")
+        view_summary_btn = QPushButton("View Model Summary")
         record_btn = QPushButton("Record GIF [R]")
         prediction_btn = QPushButton("Predict [Space]")
 
@@ -51,6 +58,10 @@ class PredictionApp(QWidget):
         # add widgets to layouts
         main_layout.addWidget(self.model_loading_status)
         main_layout.addWidget(load_model_btn, stretch=1)
+        main_layout.addWidget(self.metrics_status)
+        main_layout.addWidget(view_metrics_btn)
+        main_layout.addWidget(self.summary_status)
+        main_layout.addWidget(view_summary_btn)
         main_layout.addWidget(record_btn)
         main_layout.addWidget(self.progress_bar)
         main_layout.addWidget(self.image_label)
@@ -61,6 +72,8 @@ class PredictionApp(QWidget):
         load_model_btn.clicked.connect(self.load_model_from_folder)
         record_btn.clicked.connect(self.start_recording)
         prediction_btn.clicked.connect(self.predict_on_new)
+        view_metrics_btn.clicked.connect(self.view_model_metrics)
+        view_summary_btn.clicked.connect(self.view_model_summary)
 
         self.progress_bar.setRange(0, FRAMES_PER_GIF)
         self.progress_bar.setValue(0)
@@ -69,11 +82,13 @@ class PredictionApp(QWidget):
 
     def load_model_from_folder(self):
         dialog = QFileDialog(self)
+        self.metrics_status.setText("")
+        self.summary_status.setText("")
         path = dialog.getExistingDirectory(self,
                                            caption="Select model folder",
                                            directory="./")
         if path:
-            self.model, self.encoder = load_model_and_labels(path)
+            self.model, self.encoder, self.metrics = load_model_labels_and_metrics(path)
             if self.model is not None:
                 self.model_loading_status.setText(f"Model successfully loaded with classes: {self.encoder.classes_}")
             else:
@@ -91,6 +106,28 @@ class PredictionApp(QWidget):
 
         prediction = predict_gif(self.curr_gif.to_simple(), self.model, self.encoder)
         self.prediction_status.setText(f"You most likely signed '{prediction}'")
+
+    def view_model_metrics(self):
+        if self.model is None:
+            self.metrics_status.setText("No model loaded.")
+            return
+        elif self.metrics is None:
+            self.metrics_status.setText("No metrics saved with model.")
+            return
+        self.metrics_status.setText("")
+        plot_model_metrics(self.metrics)
+
+    def view_model_summary(self):
+        if self.model is None:
+            self.metrics_status.setText("No model loaded.")
+            return
+        self.metrics_status.setText("")
+        summary_output = StringIO()
+        with redirect_stdout(summary_output):
+            self.model.summary()
+        summary_string = summary_output.getvalue()
+        dialog = ModelSummaryDialog(summary_string, self)
+        dialog.exec()
 
     def hideEvent(self, a0: QHideEvent):
         if self.thread is not None:

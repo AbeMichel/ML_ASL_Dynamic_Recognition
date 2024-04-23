@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageQt
 from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton
-from PyQt6.QtWidgets import QProgressBar, QDialog, QFileDialog
+from PyQt6.QtWidgets import QProgressBar, QDialog, QFileDialog, QCheckBox
 from PyQt6.QtCore import QTimer, Qt, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QImage, QPixmap, QPixelFormat, QHideEvent, QShowEvent
 
@@ -44,6 +44,7 @@ class DataGatherApp(QWidget):
         main_layout = QHBoxLayout()  # Main layout
         video_layout = QVBoxLayout()  # Layout with video and label selection
         action_layout = QVBoxLayout()  # Layout with all the action buttons
+        save_to_json_layout = QHBoxLayout()  # Layout for creating JSON file
 
         create_btn = QPushButton("Record New GIF [R]")
         preview_btn = QPushButton("Preview Current GIF [P]")
@@ -54,6 +55,10 @@ class DataGatherApp(QWidget):
 
         self.progress_bar = QProgressBar()
         self.trainingLabelInput = ActionLabelInput()
+        self.add_flipped_check_box = QCheckBox()
+        self.add_flipped_check_box.setCheckable(True)
+        self.add_flipped_check_box.setChecked(False)
+        self.add_flipped_check_box.setText("Double data by flipping GIFS\n(Will also double the time)")
 
         create_btn.clicked.connect(self.start_recording)
         create_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -78,11 +83,14 @@ class DataGatherApp(QWidget):
         save_to_json_btn.clicked.connect(self.create_json_from_dir)
 
         # create a vertical box layout and add the two labels
+        save_to_json_layout.addWidget(self.add_flipped_check_box)
+        save_to_json_layout.addWidget(save_to_json_btn, stretch=10)
+
         video_layout.addWidget(self.progress_bar)
         video_layout.addWidget(self.image_label)
         video_layout.addWidget(save_dir_select)
         video_layout.addWidget(self.trainingLabelInput)
-        video_layout.addWidget(save_to_json_btn)
+        video_layout.addLayout(save_to_json_layout)
 
         action_layout.addWidget(create_btn)
         action_layout.addWidget(preview_btn)
@@ -161,6 +169,7 @@ class DataGatherApp(QWidget):
             gif_save_path = self.save_path + '\\' + str(self.curr_img_index) + '.gif'
             self.curr_gif.save_gif(gif_save_path)
             self.curr_img_index += 1
+
             print(f"\tCurrent Data Count: {self.curr_img_index}")
             self.clear_current()
 
@@ -210,7 +219,8 @@ class DataGatherApp(QWidget):
                                                     )
 
         if ok:
-            convert_all_gifs_to_simple_json(self.save_dir, file_name)
+            add_flipped_gifs = self.add_flipped_check_box.isChecked()
+            convert_all_gifs_to_simple_json(self.save_dir, file_name, add_flipped_gifs)
 
 
 def get_num_gifs_in_dir(dir_path: str) -> int:

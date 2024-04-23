@@ -18,10 +18,19 @@ import Scripts.gif as gif_utils
 matplotlib.use('TkAgg')
 
 
+def shuffle_list(list_to_shuffle: list):
+    if len(list_to_shuffle) == 0:
+        return list_to_shuffle
+    random.shuffle(list_to_shuffle)
+    return list(list_to_shuffle)
+
+
 def shuffle_data_and_labels(data: list, labels: list):
     if len(data) == 0:
         return data, labels
-    combined = list(zip(data, labels))
+    data1 = shuffle_list(data)
+    labels1 = shuffle_list(labels)
+    combined = list(zip(data1, labels1))
     random.shuffle(combined)
     shuffled_data, shuffled_labels = zip(*combined)
     return list(shuffled_data), list(shuffled_labels)
@@ -35,8 +44,8 @@ def create_model_from_json_path(json_file_path: str, batch_size: int = 15, num_e
 
 def create_model_from_json_data(gifs_json_data: dict[str, list[list[int]]], batch_size: int = 15, num_epochs: int = 20, val_split: float = 0.4):
     class_names = list(gifs_json_data.keys())
-    data: list[list[int]] = []
-    labels: list[str] = []
+    data: list[list[int]]
+    labels: list[str]
     val_data: list[list[int]] = []
     val_labels: list[str] = []
     train_data: list[list[int]] = []
@@ -47,8 +56,9 @@ def create_model_from_json_data(gifs_json_data: dict[str, list[list[int]]], batc
     for class_name, class_data in gifs_json_data.items():
         total_instances = len(class_data)
         num_for_validation = int(total_instances * val_split)
+        shuffled_class_data = shuffle_list(class_data.copy())
         i = 0
-        for gif in class_data:
+        for gif in shuffled_class_data:
             if i < num_for_validation:
                 val_data.append(gif)
                 val_labels.append(class_name)
@@ -92,18 +102,18 @@ def create_model_from_json_data(gifs_json_data: dict[str, list[list[int]]], batc
                               batch_size=batch_size,
                               validation_split=val_split)
 
-    plot_model_metrics(model_metrics)
-    return model, label_encoder, model_metrics
+    plot_model_metrics(model_metrics.history)
+    return model, label_encoder, model_metrics.history
 
 
-def plot_model_metrics(metrics):
+def plot_model_metrics(metrics: dict):
     # Plot training loss
-    plt.plot(metrics.history['loss'], label='Training Loss')
+    plt.plot(metrics['loss'], label='Training Loss')
 
     # Check if validation loss is available
-    if 'val_loss' in metrics.history:
+    if 'val_loss' in metrics:
         # Plot validation loss
-        plt.plot(metrics.history['val_loss'], label='Validation Loss')
+        plt.plot(metrics['val_loss'], label='Validation Loss')
 
     plt.title('Model Loss')
     plt.xlabel('Epoch')
@@ -112,12 +122,12 @@ def plot_model_metrics(metrics):
     plt.show()
 
     # Plot training accuracy
-    plt.plot(metrics.history['accuracy'], label='Training Accuracy')
+    plt.plot(metrics['accuracy'], label='Training Accuracy')
 
     # Check if validation accuracy is available
-    if 'val_accuracy' in metrics.history:
+    if 'val_accuracy' in metrics:
         # Plot validation accuracy
-        plt.plot(metrics.history['val_accuracy'], label='Validation Accuracy')
+        plt.plot(metrics['val_accuracy'], label='Validation Accuracy')
 
     plt.title('Model Accuracy')
     plt.xlabel('Epoch')
@@ -148,7 +158,12 @@ def save_label_encoder(label_encoder, save_path: str) -> None:
         pickle.dump((label_encoder, label_encoder.classes_), file)
 
 
-def save_model_and_labels(model, label_encoder: LabelEncoder, save_path: str) -> str:
+def save_model_metrics(metrics: dict, save_path: str) -> None:
+    with open(save_path, 'w') as file:
+        json.dump(metrics, file)
+
+
+def save_model_labels_and_metrics(model, label_encoder: LabelEncoder, metrics: dict, save_path: str) -> str:
     def ensure_path_exists(path: str):
         if os.path.exists(path):
             return
@@ -163,8 +178,10 @@ def save_model_and_labels(model, label_encoder: LabelEncoder, save_path: str) ->
     ensure_path_exists(save_path)
     model_path = save_path + "\\model.keras"
     encoder_path = save_path + "\\encoder.pkl"
+    metrics_path = save_path + "\\metrics.json"
     save_tf_model(model, model_path)
     save_label_encoder(label_encoder, encoder_path)
+    save_model_metrics(metrics, metrics_path)
     return save_path
 
 
@@ -183,17 +200,26 @@ def load_label_encoder(encoder_path: str):
     return encoder
 
 
-def load_model_and_labels(folder_path):
+def load_model_metrics(metrics_path: str):
+    if not os.path.exists(metrics_path) or not os.path.isfile(metrics_path):
+        return None
+    with open(metrics_path, 'r') as file:
+        return json.load(file)
+
+
+def load_model_labels_and_metrics(folder_path):
     model_path = folder_path + "\\model.keras"
     encoder_path = folder_path + "\\encoder.pkl"
+    metrics_path = folder_path + "\\metrics.json"
     model = load_tf_model(model_path)
     encoder = load_label_encoder(encoder_path)
-    return model, encoder
+    metrics = load_model_metrics(metrics_path)
+    return model, encoder, metrics
 
 
 if __name__ == "__main__":
     json_path = os.path.abspath('../test_data.json')
     # mdl, encdr = create_model_from_json_path(json_path)
     # save_model_and_labels(mdl, encdr, "../")
-    mdl, encdr = load_model_and_labels('../model_04-18-2024_2204')
+    mdl, encdr, mets = load_model_labels_and_metrics('../model_04-18-2024_2204')
     print(encdr.classes_)

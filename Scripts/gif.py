@@ -35,6 +35,7 @@ class GIFSimple(GIF):
     def set_data(self, data: list[int]) -> None:
         self._data = data
 
+
 class GIFJSON(GIF):
     def __init__(self) -> None:
         super().__init__()
@@ -148,6 +149,8 @@ class GIFCV(GIF):
         pil_gif: GIFPIL = self.to_pil()
         pil_gif.save_gif(path)
 
+    def flip(self):  # -> GIFCV:
+        return self.to_pil().flip().to_cv()
 
 
 class GIFPIL(GIF):
@@ -186,7 +189,7 @@ class GIFPIL(GIF):
         cv_frames = []
         for pil_frame in self._frames:
             img_array = np.array(pil_frame)
-            cv_frame = img_array[:, :, ::-1].copy()
+            cv_frame = img_array  # [:, :, ::-1].copy()
             cv_frames.append(cv_frame)
         cv_gif = GIFCV()
         cv_gif.set_class(self.get_class())
@@ -231,6 +234,16 @@ class GIFPIL(GIF):
                             duration=10,
                             loop=0
         )
+
+    def flip(self): # -> GIFPIL:
+        flipped_frames: list[Image] = []
+        for frame in self._frames:
+            flipped = frame.transpose(Image.FLIP_LEFT_RIGHT)
+            flipped_frames.append(flipped)
+        pil_gif = GIFPIL()
+        pil_gif.set_class(self.get_class())
+        pil_gif.set_frames(flipped_frames)
+        return pil_gif
 
 
 def get_action_gifs(directory_path: str) -> dict[str, list[str]]:  # returns label and paths
@@ -353,7 +366,7 @@ def display_gif(frames: list[Image]):
     tk_window.mainloop()
 
 
-def convert_all_gifs_to_simple_json(gif_dir: str, save_path: str):
+def convert_all_gifs_to_simple_json(gif_dir: str, save_path: str, add_flipped: bool = False):
     action_dict = get_action_gifs(gif_dir)
     simple_gifs: list[GIFSimple] = []
     for label, gifs in action_dict.items():
@@ -363,6 +376,11 @@ def convert_all_gifs_to_simple_json(gif_dir: str, save_path: str):
             gif.set_class(label)
             json_gif = gif.to_json()
             simple_gifs.append(json_gif.to_simple())
+            if add_flipped:
+                flipped = gif.flip()
+                flipped_json = flipped.to_json()
+                simple_gifs.append(flipped_json.to_simple())
+
     save_to_json_from_simples(simple_gifs, save_path)
 
 

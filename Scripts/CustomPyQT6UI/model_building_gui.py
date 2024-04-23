@@ -4,12 +4,13 @@ from PyQt6.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QLa
 from PyQt6.QtCore import Qt, pyqtSlot
 from Scripts.CustomPyQT6UI.directory_select_widget import DirectorySelect
 from Scripts.CustomPyQT6UI.file_select_widget import FileSelect
-from Scripts.machine_learning_model import create_model_from_json_path, save_model_and_labels
+from Scripts.machine_learning_model import create_model_from_json_path, save_model_labels_and_metrics
 
 
 class ModelBuildApp(QWidget):
     def __init__(self):
         super().__init__()
+        self.metrics: dict = {}
         self.epoch_spinbox: QSpinBox = QSpinBox()
         self.batch_size_spinbox: QSpinBox = QSpinBox()
         self.val_split_spinbox: QDoubleSpinBox = QDoubleSpinBox()
@@ -98,16 +99,16 @@ class ModelBuildApp(QWidget):
             self.build_model_status_label.setText("No json file selected!")
             return
         self.build_model_status_label.setText("Building model... please wait")
-        self.current_model, self.current_encoder, metrics = create_model_from_json_path(self.current_json_file_path,
+        self.current_model, self.current_encoder, self.metrics = create_model_from_json_path(self.current_json_file_path,
                                                                                         self.batch_size_spinbox.value(),
                                                                                         self.epoch_spinbox.value(),
                                                                                         self.val_split_spinbox.value())
         num_decimal_places = 3
         self.build_model_status_label.setText(f"Model built successfully:"
-                                              f"\n\tAccuracy = {round(metrics.history['accuracy'][-1], num_decimal_places)}"
-                                              f"\n\tLoss = {round(metrics.history['loss'][-1], num_decimal_places)}"
-                                              f"\n\tValidation Accuracy = {round(metrics.history['val_accuracy'][-1], num_decimal_places)}"
-                                              f"\n\tValidation Loss = {round(metrics.history['val_loss'][-1], num_decimal_places)}")
+                                              f"\n\tAccuracy = {round(self.metrics['accuracy'][-1], num_decimal_places)}"
+                                              f"\n\tLoss = {round(self.metrics['loss'][-1], num_decimal_places)}"
+                                              f"\n\tValidation Accuracy = {round(self.metrics['val_accuracy'][-1], num_decimal_places)}"
+                                              f"\n\tValidation Loss = {round(self.metrics['val_loss'][-1], num_decimal_places)}")
 
     def save_curr_model(self):
         if self.current_model is None:
@@ -117,7 +118,7 @@ class ModelBuildApp(QWidget):
             self.save_model_status_label.setText("No save directory selected!")
             return
         self.save_model_status_label.setText("")
-        model_folder = save_model_and_labels(self.current_model, self.current_encoder, self.current_save_dir)
+        model_folder = save_model_labels_and_metrics(self.current_model, self.current_encoder, self.metrics, self.current_save_dir)
         self.save_model_status_label.setText(f"Model saved successfully to: {model_folder}")
 
 
