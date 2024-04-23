@@ -36,13 +36,13 @@ def shuffle_data_and_labels(data: list, labels: list):
     return list(shuffled_data), list(shuffled_labels)
 
 
-def create_model_from_json_path(json_file_path: str, batch_size: int = 15, num_epochs: int = 20, val_split: float = 0.4):
+def create_model_from_json_path(json_file_path: str, layers_list: list[layers] = None, batch_size: int = 15, num_epochs: int = 20, val_split: float = 0.4):
     with open(json_file_path, 'r') as json_file:
         gifs_json_data = json.load(json_file)
-    return create_model_from_json_data(gifs_json_data, batch_size, num_epochs, val_split)
+    return create_model_from_json_data(gifs_json_data, layers_list, batch_size, num_epochs, val_split)
 
 
-def create_model_from_json_data(gifs_json_data: dict[str, list[list[int]]], batch_size: int = 15, num_epochs: int = 20, val_split: float = 0.4):
+def create_model_from_json_data(gifs_json_data: dict[str, list[list[int]]], layers_list: list[layers] = None, batch_size: int = 15, num_epochs: int = 20, val_split: float = 0.4):
     class_names = list(gifs_json_data.keys())
     data: list[list[int]]
     labels: list[str]
@@ -81,15 +81,22 @@ def create_model_from_json_data(gifs_json_data: dict[str, list[list[int]]], batc
     label_encoder = LabelEncoder()
     labels_encoded = label_encoder.fit_transform(np_labels)
 
+    if layers_list is None or len(layers_list) == 0:
+        layers_list = [
+            layers.Conv1D(32, 3, padding='same', activation='relu'),
+            layers.Conv1D(64, 3, padding='same', activation='relu'),
+            layers.MaxPooling1D(),
+            layers.Dropout(rate=0.1),
+            layers.Flatten(),
+            layers.Dense(128, activation='relu')
+        ]
+
     model = tf.keras.Sequential()
     model.add(layers.Reshape((input_shape, 1), input_shape=(input_shape, 1)))
 
-    model.add(layers.Conv1D(32, 3, padding='same', activation='relu'))
-    model.add(layers.Conv1D(64, 3, padding='same', activation='relu'))
-    model.add(layers.MaxPooling1D())
-    model.add(layers.Dropout(rate=0.1))
-    model.add(layers.Flatten())
-    model.add(layers.Dense(128, activation='relu'))
+    for layer in layers_list:
+        model.add(layer)
+
     model.add(layers.Dense(len(class_names), activation='softmax'))
 
     model.compile(optimizer='adam',

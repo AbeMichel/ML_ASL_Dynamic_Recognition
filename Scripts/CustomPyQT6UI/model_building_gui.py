@@ -5,11 +5,15 @@ from PyQt6.QtCore import Qt, pyqtSlot
 from Scripts.CustomPyQT6UI.directory_select_widget import DirectorySelect
 from Scripts.CustomPyQT6UI.file_select_widget import FileSelect
 from Scripts.machine_learning_model import create_model_from_json_path, save_model_labels_and_metrics
+from Scripts.CustomPyQT6UI.model_building_dialog import CreateLayersDialog
 
 
 class ModelBuildApp(QWidget):
     def __init__(self):
         super().__init__()
+        self.layer_dialog = CreateLayersDialog(self)
+        self.create_layers_label = QLabel("Current Layers: []")
+        self.layers = []
         self.metrics: dict = {}
         self.epoch_spinbox: QSpinBox = QSpinBox()
         self.batch_size_spinbox: QSpinBox = QSpinBox()
@@ -33,6 +37,7 @@ class ModelBuildApp(QWidget):
 
         # create the needed UI elements
         json_select = FileSelect("Select JSON File", "JSON (*.json)", "Open JSON Data")
+        create_layers_btn = QPushButton("Add Layers to Model")
         self.build_model_status_label = QLabel()
         build_model_btn = QPushButton("Build Model")
         save_directory_select = DirectorySelect("Select Save Directory")
@@ -53,6 +58,8 @@ class ModelBuildApp(QWidget):
         # add to layouts
 
         main_layout.addWidget(json_select, stretch=1)
+        main_layout.addWidget(self.create_layers_label, stretch=1)
+        main_layout.addWidget(create_layers_btn, stretch=1)
         main_layout.addLayout(model_settings_layout)
         main_layout.addWidget(self.build_model_status_label, stretch=1)
         main_layout.addWidget(build_model_btn, stretch=1)
@@ -72,6 +79,7 @@ class ModelBuildApp(QWidget):
         # set widget attributes
         build_model_btn.clicked.connect(self.build_curr_model)
         save_model_btn.clicked.connect(self.save_curr_model)
+        create_layers_btn.clicked.connect(self.create_layers)
 
         json_select.file_selected_signal.connect(self.set_json_path)
         save_directory_select.directory_selected_signal.connect(self.set_save_dir)
@@ -99,16 +107,21 @@ class ModelBuildApp(QWidget):
             self.build_model_status_label.setText("No json file selected!")
             return
         self.build_model_status_label.setText("Building model... please wait")
-        self.current_model, self.current_encoder, self.metrics = create_model_from_json_path(self.current_json_file_path,
-                                                                                        self.batch_size_spinbox.value(),
-                                                                                        self.epoch_spinbox.value(),
-                                                                                        self.val_split_spinbox.value())
-        num_decimal_places = 3
-        self.build_model_status_label.setText(f"Model built successfully:"
-                                              f"\n\tAccuracy = {round(self.metrics['accuracy'][-1], num_decimal_places)}"
-                                              f"\n\tLoss = {round(self.metrics['loss'][-1], num_decimal_places)}"
-                                              f"\n\tValidation Accuracy = {round(self.metrics['val_accuracy'][-1], num_decimal_places)}"
-                                              f"\n\tValidation Loss = {round(self.metrics['val_loss'][-1], num_decimal_places)}")
+        try:
+            self.current_model, self.current_encoder, self.metrics = create_model_from_json_path(
+                json_file_path=self.current_json_file_path,
+                layers_list=self.layers,
+                batch_size=self.batch_size_spinbox.value(),
+                num_epochs=self.epoch_spinbox.value(),
+                val_split=self.val_split_spinbox.value())
+            num_decimal_places = 3
+            self.build_model_status_label.setText(f"Model built successfully:"
+                                                  f"\n\tAccuracy = {round(self.metrics['accuracy'][-1], num_decimal_places)}"
+                                                  f"\n\tLoss = {round(self.metrics['loss'][-1], num_decimal_places)}"
+                                                  f"\n\tValidation Accuracy = {round(self.metrics['val_accuracy'][-1], num_decimal_places)}"
+                                                  f"\n\tValidation Loss = {round(self.metrics['val_loss'][-1], num_decimal_places)}")
+        except ValueError as e:
+            self.build_model_status_label.setText(str(e))
 
     def save_curr_model(self):
         if self.current_model is None:
@@ -118,8 +131,17 @@ class ModelBuildApp(QWidget):
             self.save_model_status_label.setText("No save directory selected!")
             return
         self.save_model_status_label.setText("")
-        model_folder = save_model_labels_and_metrics(self.current_model, self.current_encoder, self.metrics, self.current_save_dir)
+        model_folder = save_model_labels_and_metrics(self.current_model, self.current_encoder, self.metrics,
+                                                     self.current_save_dir)
         self.save_model_status_label.setText(f"Model saved successfully to: {model_folder}")
+
+    def create_layers(self):
+        if self.layer_dialog is None:
+            self.layer_dialog = CreateLayersDialog(self)
+        if self.layer_dialog.exec() == self.layer_dialog.DialogCode.Accepted:
+            self.layers = self.layer_dialog.get_result()
+            layer_names = [layer.name for layer in self.layers]
+            self.create_layers_label.setText(f"Current Layers: {layer_names}")
 
 
 if __name__ == "__main__":
