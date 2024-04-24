@@ -26,6 +26,7 @@
 
 ### Setup
 ***Starting***:
+1. (Optional) Download my models that support 5 signs [here (Google Drive)](https://drive.google.com/file/d/1_da7gQPMACUVHiLSe8W0MWTbSPwh0YP7/view?usp=sharing)
 1. Install Python
 2. Run *DoSetup.bat* from *./MLGIFProject/*
 3. Run *RunMain.bat* from *./MLGIFProject/*
