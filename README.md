@@ -19,7 +19,9 @@
   - Hello
   - Goodbye
 - Provide an accessible program for people to learn about the machine learning process and ASL
-- Eventually create functionality for real-time classification as well
+- Add more ASL signs to the model
+- Create better error display
+- Expand on the UI to make it more intuitive and the model customizable
 
 ### Training Data
 Data for this project is stored in two formats: JSON and GIF. 
@@ -46,7 +48,7 @@ The hardcoded parameters and options I have as of writing this are:
 - ***Optimizer***: Adam
 - ***Training Metric***: Accuracy
 
-The code for creating the model is below,
+The code for creating the default model is below,
       
 ```python
 model = tf.keras.Sequential()
