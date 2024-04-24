@@ -28,9 +28,7 @@ def shuffle_list(list_to_shuffle: list):
 def shuffle_data_and_labels(data: list, labels: list):
     if len(data) == 0:
         return data, labels
-    data1 = shuffle_list(data)
-    labels1 = shuffle_list(labels)
-    combined = list(zip(data1, labels1))
+    combined = list(zip(data, labels))
     random.shuffle(combined)
     shuffled_data, shuffled_labels = zip(*combined)
     return list(shuffled_data), list(shuffled_labels)
