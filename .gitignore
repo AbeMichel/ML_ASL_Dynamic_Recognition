@@ -6,4 +6,6 @@
 *.keras
 *.pkl
 *.gif
+!/README\ Resources/*
+!/README\ Resources/Action\ Examples/*.gif
 

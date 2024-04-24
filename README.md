@@ -2,13 +2,14 @@
 
 ### Table of Contents
 - [Goals](#goals)
+- [Setup](#setup)
+- [Python Libraries Utilized](#libraries-utilized)
 - [Training Data](#training-data)
 - [The Model](#the-model)
 - [How to](#how-to)
   - [Step 1: Create Data](#step-1-create-data)
   - [Step 2: Build Model](#step-2-build-model)
   - [Step 3: Predict](#step-3-predict)
-- [Python Libraries Utilized](#libraries-utilized)
 - [Additional Resources and References](#additional-resources)
 
 ### Goals
@@ -23,12 +24,68 @@
 - Create better error display
 - Expand on the UI to make it more intuitive and the model customizable
 
+### Setup
+***Starting***:
+1. Install Python
+2. Run *DoSetup.bat* from *./MLGIFProject/*
+3. Run *RunMain.bat* from *./MLGIFProject/*
+
+***Python Version***: 3.11.4
+
+***Bat files***:
+- DoSetup.bat: Installs needed libraries and does some python package setup
+```
+pip install -r "requirements.txt"
+python setup.py install
+```
+
+- RunMain.bat: Starts the application
+```
+python "Scripts/main.py"
+```
+
+### Libraries Utilized
+This project is coded in Python and as such involves a variety of libraries. The libraries and their versions are listed
+below.
+
+| Library      | Version     |
+|--------------|-------------|
+| OpenCV       | 4.9.0.80    |
+| pillow       | 10.2.0      |
+| PyQt6        | 6.6.1       |
+| tensorflow   | 2.16.1      |
+| mediapipe    | 0.10.11     |
+| matplotlib   | 3.8.3       |
+| numpy        | 1.26.4      |
+| pathlib      | 1.0.1       |
+| scikit-learn | 1.4.1.post1 |
+| setuptools   | 60.2.0      |
+| jsonschema   | 4.21.1      |
+
 ### Training Data
 Data for this project is stored in two formats: JSON and GIF. 
 
 GIFs were utilized as a storage friendly alternative to common video formats while still allowing for a lot of control over the data within. Each GIF is recorded as 30 frames over a period of 1.5 seconds.
 
 The JSON data is created from GIFs by passing each frame of the GIFs through a hand landmark detection model. The points returned from this model (up to 63 per frame) are then added to corresponding class in the JSON file. 
+
+An example of the 5 signs are below:
+
+Hello
+- <img alt="hello" src=".\README Resources\Action Examples\hello.gif" width="200px">
+
+Goodbye
+- <img alt="goodbye" src=".\README Resources\Action Examples\goodbye.gif" width="200px">
+
+Thank you
+- <img alt="thank you" src=".\README Resources\Action Examples\thank_you.gif" width="200px">
+
+How are you
+- <img alt="how are you" src=".\README Resources\Action Examples\how_are_you.gif" width="200px">
+
+Nice to meet you
+- <img alt="nice to meet you" src=".\README Resources\Action Examples\nice_to_meet_you.gif" width="200px">
+
 
 ### The Model
 The model used in this project is built using the Tensorflow Keras framework.
@@ -154,24 +211,6 @@ The UI for creating new data to predict on is very similar to creating data for 
 5. Displays the predicted class.
 
 <img alt="" src=".\README Resources\predict_prediction_ui.jpg" width="500px">
-
-### Libraries Utilized
-This project is coded in Python and as such involves a variety of libraries. The libraries and their versions are listed
-below.
-
-| Library      | Version     |
-|--------------|-------------|
-| OpenCV       | 4.9.0.80    |
-| pillow       | 10.2.0      |
-| PyQt6        | 6.6.1       |
-| tensorflow   | 2.16.1      |
-| mediapipe    | 0.10.11     |
-| matplotlib   | 3.8.3       |
-| numpy        | 1.26.4      |
-| pathlib      | 1.0.1       |
-| scikit-learn | 1.4.1.post1 |
-| setuptools   | 60.2.0      |
-| jsonschema   | 4.21.1      |
 
 ### Additional Resources
 Below are some of the resources and sites I utilized while working on this project. While not an exhaustive list it does help one in their journey to understanding ASL and machine learning.
